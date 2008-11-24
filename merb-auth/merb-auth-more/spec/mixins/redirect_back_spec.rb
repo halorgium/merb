@@ -10,7 +10,8 @@ describe "redirect_back" do
     Merb::Router.prepare do
       match("/login", :method => :get).to(:controller => "exceptions", :action => "unauthenticated").name(:login)
       match("/login", :method => :put).to(:controller => "sessions", :action => "update")
-      match("/go_back").to(:controller => "my_controller")
+      match("/go_back2").to(:controller => "my_controller", :action => "go_back2")
+      match("/go_back").to(:controller => "my_controller", :action => "go_back")
       match("/").to(:controller => "my_controller")
       match("/logout", :method => :delete).to(:controller => "sessions", :action => "destroy")
     end
@@ -53,6 +54,14 @@ describe "redirect_back" do
       def index
         "IN MY CONTROLLER"
       end
+
+      def go_back
+        "go_back"
+      end
+
+      def go_back2
+        "go_back2"
+      end
     end
 
   end 
@@ -71,6 +80,24 @@ describe "redirect_back" do
   it  "should not set the return_to in the session when deliberately going to unauthenticated" do
     r = login
     r.should redirect_to("/")
+  end
+
+  it "should redirect to the /go_back url even if it is in the middle of login attempts" do
+    request("/login", :method => "put", :params => {:pass_auth => false})
+    request("/go_back")
+    request("/login", :method => "put", :params => {:pass_auth => false})
+    request("/login", :method => "put", :params => {:pass_auth => false})
+    r = login
+    r.should redirect_to("/go_back")
+  end
+
+  it "should redirect to the last non-login url" do
+    request("/go_back2")
+    request("/go_back")
+    request("/login", :method => "put", :params => {:pass_auth => false})
+    request("/login", :method => "put", :params => {:pass_auth => false})
+    r = login
+    r.should redirect_to("/go_back")
   end
   
   it "should still redirect to the original even if it's failed many times" do

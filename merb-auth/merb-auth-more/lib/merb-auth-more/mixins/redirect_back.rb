@@ -24,14 +24,17 @@ module Merb::AuthenticatedHelper
   # you can include an ignore url.  Basically, if the return url == the ignore url go to the default_url
   #
   # set the ignore url via an :ignore option in the opts hash.
-  def redirect_back_or(default_url, opts = {})
-    if !session[:return_to].blank? && ![opts[:ignore]].flatten.include?(session[:return_to].first)
-      redirect session[:return_to].first, opts
-      session[:return_to] = nil
-    else
-      redirect default_url, opts
+  def redirect_back_or(default_url, *args)
+    options = args.last.is_a?(Hash) ? args.pop : {}
+    ignore = options.delete(:ignore) || []
+
+    return_to = (session[:return_to] || [])
+    session[:return_to] = nil
+
+    url = return_to.find do |url|
+      !ignore.include?(url)
     end
-    "Redirecting to <a href='#{default_url}'>#{default_url}</a>"
+    redirect url || default_url, options
   end
   
 end
@@ -51,7 +54,7 @@ module Merb::Authentication::Mixins
     def _set_return_to
       unless request.exceptions.blank?
         session[:return_to] ||= []
-        session[:return_to] << request.uri
+        session[:return_to].unshift request.uri
         session[:return_to]
       end
     end
